@@ -19,7 +19,13 @@ defmodule Waffle.Ecto.Type do
 
   def cast(definition, args) do
     case definition.store(args) do
-      {:ok, file} -> {:ok, %{file_name: file, updated_at: NaiveDateTime.truncate(NaiveDateTime.utc_now, :second)}}
+      {:ok, [{:ok, %{name: file}} | _]} ->
+        {:ok,
+         %{
+           file_name: file,
+           updated_at: NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second)
+         }}
+
       error ->
         Logger.error(inspect(error))
         :error
@@ -32,19 +38,22 @@ defmodule Waffle.Ecto.Type do
         true ->
           [_, file_name, gsec] = Regex.run(@filename_with_timestamp, value)
           {file_name, gsec}
-        _ -> {value, nil}
+
+        _ ->
+          {value, nil}
       end
 
-    updated_at = case gsec do
-      gsec when is_binary(gsec) ->
-        gsec
-        |> String.to_integer
-        |> :calendar.gregorian_seconds_to_datetime
-        |> NaiveDateTime.from_erl!
+    updated_at =
+      case gsec do
+        gsec when is_binary(gsec) ->
+          gsec
+          |> String.to_integer()
+          |> :calendar.gregorian_seconds_to_datetime()
+          |> NaiveDateTime.from_erl!()
 
-      _ ->
-        nil
-    end
+        _ ->
+          nil
+      end
 
     {:ok, %{file_name: file_name, updated_at: updated_at}}
   end
